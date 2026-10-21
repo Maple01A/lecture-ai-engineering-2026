@@ -23,23 +23,46 @@ DEFAULT_QUESTION = "AIE2026の講座の宿題にある「3レベル」とは何�
 
 def ask(question: str) -> str:
     client = genai.Client(api_key=get_api_key())
-    response = client.models.generate_content(model=MODEL, contents=question)
 
-    # TODO(第1回 演習): response.usage_metadata から
-    #   入力トークン数と出力トークン数を表示してみよう（Copilotに頼んでよい）
+    # 会話を作成
+    chat = client.chats.create(model=MODEL)
+
+    # 最初の質問
+    response = chat.send_message(question)
+
+    usage = response.usage_metadata
+    print(
+        f"[usage] input={usage.prompt_token_count} "
+        f"output={usage.candidates_token_count}"
+    )
+
+    print(response.text)
+
+    # 続けて質問
+    while True:
+        question = input("\n質問（終了: exit）: ").strip()
+
+        if question.lower() == "exit":
+            break
+
+        if not question:
+            continue
+
+        response = chat.send_message(question)
+        print(response.text)
 
     return response.text
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="素のLLMに質問する")
+    parser = argparse.ArgumentParser(description="会話履歴を保持してLLMに質問する")
     parser.add_argument("question", nargs="?", default=DEFAULT_QUESTION)
     args = parser.parse_args()
 
     print(f"[model] {MODEL}")
     print(f"[質問] {args.question}\n")
     try:
-        print(ask(args.question))
+        ask(args.question)
     except errors.APIError as e:
         print(api_error_message(e.code, e.message))
         raise SystemExit(1)
