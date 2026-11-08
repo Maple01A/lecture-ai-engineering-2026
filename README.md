@@ -87,4 +87,21 @@ pyproject.toml / uv.lock  依存パッケージとその固定版
 AIE_MODEL=gemini-3.5-flash uv run python -m app.ask "LoRAとは何ですか？"
 ```
 
+複数のモデル・質問の応答時間とトークン数を比較する場合は、ベンチマークモードを使えます。
+`--repeat` は同じ組み合わせを繰り返す回数です。1回の実行で複数のAPIリクエストを行うため、
+無料枠の1分あたり・1日あたりの上限を早く消費します。
+
+```bash
+uv run python -m app.ask --benchmark \
+  --model gemini-3.5-flash \
+  --model gemini-3.5-flash-lite \
+  --question "LoRAとは何ですか？" \
+  --question "RAGとは何ですか？" \
+  --repeat 3
+```
+
+出力の `seconds` はAPI呼び出しの経過時間、`input_tokens` / `output_tokens` は
+Geminiが返した使用量です。429が出た行はレート制限に達した試行なので、
+モデル間の比較から分けて考え、時間を置いて再実行してください。
+
 無料枠には1分あたり・1日あたりのリクエスト上限があります。上限は [Gemini API のレート制限のページ](https://ai.google.dev/gemini-api/docs/rate-limits) で確認してください。
