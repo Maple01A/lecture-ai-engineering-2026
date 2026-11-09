@@ -18,7 +18,9 @@
 - 取り組んだレベル：実装
 - やったこと：
   - `app/tools.py` に `save_learning_log(entry)` を追加し、`learning_log/learning_log.jsonl` に日時と学習内容を追記するようにした。
+  - `app/tools.py` に `search_learning_log(query="")` も追加し、保存済みの学習記録を読み込んで検索できるようにした。
   - `app/agent.py` では、`DeferredToolRequests` を `output_type` に追加し、保存ツールを `requires_approval=True` に設定して登録した。
+  - 過去の学習内容を聞かれたときは `search_learning_log` を使うように指示した。
   - CLIでは、保存前に `Yes/No` の確認を表示し、利用者の承認結果を `build_results()` に渡すようにした。
 - 結果：
   - 保存ツールが呼び出されると、実行前に DeferredToolRequests による承認待ちの状態になった。

@@ -36,6 +36,7 @@ INSTRUCTIONS = """\
 - 回答の最後に、関係する回（第N回）を示す。
 - 確認問題を求められたら、make_quiz を使う。
 - 学習の記録を保存してほしいと頼まれたら、save_learning_log を使う。
+- 過去の学習内容や学習履歴について聞かれたら、search_learning_log を使う。
 - 宿題の答えそのものは書かず、考え方のヒントで導く。
 """
 
@@ -44,6 +45,7 @@ agent = Agent(instructions=INSTRUCTIONS, output_type=[str, DeferredToolRequests]
 agent.tool_plain(tools.search_glossary)
 agent.tool_plain(tools.get_lecture_summary)
 agent.tool_plain(tools.make_quiz)
+agent.tool_plain(tools.search_learning_log)
 agent.tool_plain(tools.save_learning_log, requires_approval=True)
 
 # 第3回 演習: tools.py の make_quiz をエージェントに登録する

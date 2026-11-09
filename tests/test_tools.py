@@ -49,6 +49,23 @@ def test_save_learning_log_appends_jsonl(tmp_path, monkeypatch):
     assert "保存しました" in message
 
 
+def test_search_learning_log_returns_matching_records(tmp_path, monkeypatch):
+    monkeypatch.setattr(tools, "LEARNING_LOG_DIR", tmp_path)
+    tools.save_learning_log("LoRAは低ランク行列を学習する")
+    tools.save_learning_log("QLoRAは量子化してメモリを節約する")
+
+    records = json.loads(tools.search_learning_log("LoRA"))
+
+    assert len(records) == 2
+    assert records[0]["entry"].startswith("QLoRA")
+
+
+def test_search_learning_log_reports_missing_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(tools, "LEARNING_LOG_DIR", tmp_path)
+
+    assert tools.search_learning_log() == "学習記録はまだありません。"
+
+
 def test_default_question_of_lecture1_is_answerable_from_glossary():
     """第1回の既定の質問（app.ask）は、第3回のエージェントが用語集で正しく答えられること。"""
     from app.ask import DEFAULT_QUESTION

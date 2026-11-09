@@ -118,3 +118,36 @@ def save_learning_log(entry: str) -> str:
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
     return f"学習記録を {path} に保存しました。"
+
+
+def search_learning_log(query: str = "") -> str:
+    """保存済みの学習記録を読み込み、質問に関係する記録を返す。
+
+    過去に学んだ内容や自分の学習履歴について聞かれたときに使う。
+    query が空なら、保存されているすべての記録を新しい順に返す。
+    """
+    path = LEARNING_LOG_DIR / "learning_log.jsonl"
+    if not path.exists():
+        return "学習記録はまだありません。"
+
+    records = []
+    with path.open(encoding="utf-8") as f:
+        for line_number, line in enumerate(f, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"{path} の {line_number} 行目がJSONとして不正です") from e
+            if not isinstance(record, dict) or not isinstance(record.get("entry"), str):
+                raise ValueError(f"{path} の {line_number} 行目は学習記録の形式ではありません")
+            records.append(record)
+
+    if query.strip():
+        q = _normalize(query)
+        records = [record for record in records if q in _normalize(record["entry"])]
+
+    records.reverse()
+    if not records:
+        return f"「{query}」に一致する学習記録はありません。"
+    return json.dumps(records, ensure_ascii=False)

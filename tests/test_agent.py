@@ -42,6 +42,15 @@ def test_glossary_result_reaches_the_model():
     assert returns and returns[0].tool_name == "search_glossary"
 
 
+def test_learning_log_tool_is_registered():
+    model = TestModel(call_tools=["search_learning_log"])
+    with agent.override(model=model):
+        result = agent.run_sync("過去のLoRAの学習内容を見せて")
+
+    returns = _parts(result, ToolReturnPart)
+    assert returns and returns[0].tool_name == "search_learning_log"
+
+
 def test_save_learning_log_waits_for_approval():
     model = TestModel(call_tools=["save_learning_log"])
     with agent.override(model=model):
