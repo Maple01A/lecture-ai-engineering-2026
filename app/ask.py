@@ -150,7 +150,7 @@ def _print_benchmark(results: Iterable[BenchmarkResult]) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="会話履歴を保持してLLMに質問する")
+    parser = argparse.ArgumentParser(description="素のLLMに質問する")
     parser.add_argument("question", nargs="?", help="対話モードで送る質問")
     parser.add_argument("--benchmark", action="store_true", help="モデル・質問ごとの測定を行う")
     parser.add_argument("--model", dest="models", action="append", help="測定対象モデル（複数指定可）")
