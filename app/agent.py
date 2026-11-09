@@ -123,7 +123,7 @@ def approve_deferred_tools(target: Agent, result, model):
     approvals = {}
     for call in requests.approvals:
         print(f"\n保存してよいですか？\n  {call.args}")
-        answer = input("承認しますか？ [y/N] ").strip().lower()
+        answer = input("承認しますか？ [y/n] ").strip().lower()
         approvals[call.tool_call_id] = answer in {"y", "yes"}
     return target.run_sync(
         message_history=result.all_messages(),
