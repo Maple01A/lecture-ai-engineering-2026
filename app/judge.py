@@ -14,6 +14,7 @@ pass / fail / unsure のどれかを返させる（構造化出力）。unsure �
 """
 
 import argparse
+import hashlib
 import json
 import re
 import time
@@ -76,6 +77,15 @@ def write_jsonl(path: Path, rows: list[dict]) -> None:
     with open(path, "w", encoding="utf-8") as f:
         for row in rows:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def sha256_file(path: Path) -> str:
+    """ファイル内容のSHA-256を返し、採点に使った入力を特定できるようにする。"""
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def load_labels(path: Path) -> dict[str, dict]:
@@ -381,7 +391,21 @@ def main(argv: list[str] | None = None) -> None:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
         json.dumps(
-            {"model": model_name, "rubric": str(_rel(args.rubric)), "run_at": datetime.now().isoformat(timespec="seconds"),
+            {
+             "model": model_name,
+             "rubric": str(_rel(args.rubric)),
+             "run_at": datetime.now().isoformat(timespec="seconds"),
+             "reproducibility": {
+                 "cases": str(_rel(args.cases)),
+                 "cases_sha256": sha256_file(args.cases),
+                 "labels": str(_rel(args.labels)),
+                 "labels_sha256": sha256_file(args.labels),
+                 "rubric_sha256": sha256_file(args.rubric),
+                 "case_count": len(cases),
+                 "label_count": len(labels),
+                 "wait_seconds": args.wait,
+                 "temperature": 0.0,
+             },
              "verdicts": verdicts, "summary": summary},
             ensure_ascii=False, indent=2,
         ),

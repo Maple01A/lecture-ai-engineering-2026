@@ -16,6 +16,7 @@ from app.judge import (
     load_labels,
     overall,
     read_jsonl,
+    sha256_file,
     summarize,
 )
 
@@ -26,6 +27,14 @@ def test_lecture_mark_is_checked_by_code():
     assert check_lecture_mark("LoRA は…\n\n関係する回：第2回") == "pass"
     assert check_lecture_mark("第2回で扱う LoRA は…\n\n以上です。") == "fail"  # 末尾に無ければ fail
     assert check_lecture_mark("") == "fail"
+
+
+def test_sha256_file_is_deterministic(tmp_path):
+    path = tmp_path / "input.txt"
+    path.write_text("評価セット", encoding="utf-8")
+    first = sha256_file(path)
+    assert first == sha256_file(path)
+    assert len(first) == 64
 
 
 def test_overall_requires_all_required_criteria():
