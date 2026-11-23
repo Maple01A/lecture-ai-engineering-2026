@@ -18,6 +18,7 @@ from app.config import (
     EMBEDDING_DIMENSIONS, EMBEDDING_MAX_TOKENS, EMBEDDING_MODEL,
     RAG_DB, RAG_DOCUMENT_IDS, RAG_SOURCE, RAG_TOP_K, RAG_TREE, get_api_key,
     RAG_GRAPH, GRAPH_START_K, GRAPH_HOPS, GRAPH_MAX_RESULTS,
+    HYBRID_MAX_RESULTS, TREE_GRAPH_MAX_RESULTS,
 )
 
 
@@ -183,6 +184,66 @@ def search_graph(query: str) -> dict:
     expanded = [candidate for _, candidate in sorted(candidates.values())]
     return {"seeds": results, "expanded": expanded[:max(0, GRAPH_MAX_RESULTS - len(results))],
             "max_hops": GRAPH_HOPS}
+
+
+def search_hybrid(query: str) -> dict:
+    """Graphで候補を広げ、Treeの章兄弟ページで文脈を補う。"""
+    graph_result = search_graph(query)
+    pages = {page["page_id"]: page for page in load_pages(RAG_SOURCE)}
+    tree = json.loads(RAG_TREE.read_text(encoding="utf-8"))
+    graph_candidates = [*graph_result["seeds"], *graph_result["expanded"]]
+
+    def section_for(page_id: str) -> tuple[list[dict], list[str]] | None:
+        for document in tree.get("children", []):
+            if document["id"] not in RAG_DOCUMENT_IDS:
+                continue
+            for section in document.get("children", []):
+                page_ids = [child["id"] for child in section.get("children", [])
+                            if child["kind"] == "page"]
+                if page_id in page_ids:
+                    return ([{"id": child["id"], "title": child["title"]}
+                             for child in section.get("children", [])
+                             if child["kind"] == "page"],
+                            [document["title"], section["title"]])
+        return None
+
+    candidates = []
+    seen = set()
+    for rank, page in enumerate(graph_candidates):
+        page_id = page["page_id"]
+        if page_id in seen:
+            continue
+        seen.add(page_id)
+        candidates.append({**pages[page_id],
+                           "source": "graph_seed" if rank < len(graph_result["seeds"]) else "graph_expanded",
+                           "rank": rank,
+                           "tree_context": section_for(page_id)})
+
+    for base in list(candidates):
+        section = section_for(base["page_id"])
+        if section is None:
+            continue
+        siblings, tree_path = section
+        for sibling in siblings:
+            sibling_id = sibling["id"]
+            if sibling_id in seen or sibling_id not in pages:
+                continue
+            seen.add(sibling_id)
+            candidates.append({**pages[sibling_id],
+                               "source": "tree_sibling",
+                               "rank": base["rank"],
+                               "tree_context": (siblings, tree_path)})
+
+    candidates = candidates[:TREE_GRAPH_MAX_RESULTS]
+    return {"graph": {"seeds": graph_result["seeds"],
+                      "expanded": graph_result["expanded"]},
+            "tree_graph": candidates,
+            "max_results": TREE_GRAPH_MAX_RESULTS}
+
+
+def search_tree_graph(query: str) -> dict:
+    """TreeとGraphを組み合わせた明示的な検索インターフェース。"""
+    return search_hybrid(query)
 
 
 

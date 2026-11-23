@@ -12,6 +12,7 @@ from pydantic_ai.messages import ToolCallPart, ToolReturnPart
 from pydantic_ai.models.test import TestModel
 
 from app.agent import agent
+from app.retrieval import search_tree_graph
 
 BASE_TOOLS = {"search_materials"}
 
@@ -46,3 +47,32 @@ def test_material_result_reaches_the_model(monkeypatch):
     returns = _parts(result, ToolReturnPart)
     assert returns and returns[0].tool_name == "search_materials"
     assert json.loads(returns[0].content)["results"] == [hit]
+
+
+def test_tree_graph_search_merges_graph_and_tree_siblings(monkeypatch):
+    pages = [
+        {"page_id": "lec03-main-p038", "document_id": "lec03-main", "lecture": 3,
+         "document_title": "AIエージェント", "section": "Part 6 メモリ",
+         "title": "メモリがないと毎回ゼロから", "page": 38, "content": "前回の失敗"},
+        {"page_id": "lec03-main-p039", "document_id": "lec03-main", "lecture": 3,
+         "document_title": "AIエージェント", "section": "Part 6 メモリ",
+         "title": "実装例：Claude", "page": 39, "content": "コンテキスト内と外部保存先"},
+        {"page_id": "lec03-main-p040", "document_id": "lec03-main", "lecture": 3,
+         "document_title": "AIエージェント", "section": "Part 6 メモリ",
+         "title": "実装例：OpenClaw", "page": 40, "content": "長期メモリ"},
+    ]
+    monkeypatch.setattr("app.retrieval.search", lambda *args, **kwargs: [pages[1]])
+    monkeypatch.setattr(
+        "app.retrieval.search_graph",
+        lambda *args, **kwargs: {"seeds": [pages[1]], "expanded": [pages[2]],
+                                 "max_hops": 2},
+    )
+    monkeypatch.setattr("app.retrieval.load_pages", lambda *args, **kwargs: pages)
+
+    result = search_tree_graph("コンパクション メモリ")
+
+    ids = [page["page_id"] for page in result["tree_graph"]]
+    assert "lec03-main-p039" in ids
+    assert "lec03-main-p040" in ids
+    assert "lec03-main-p038" in ids
+    assert len(ids) == len(set(ids))
